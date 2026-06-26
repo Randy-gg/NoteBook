@@ -1,0 +1,668 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>笔记</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sidebar-width: 280px;
+    --bg: #ffffff;
+    --bg-sidebar: #f4f5f7;
+    --bg-sidebar-hover: #ebecf0;
+    --bg-active: #dfe1e6;
+    --bg-editor: #ffffff;
+    --text-primary: #172b4d;
+    --text-secondary: #5e6c84;
+    --text-muted: #97a0af;
+    --border: #dfe1e6;
+    --accent: #0052cc;
+    --accent-hover: #0065ff;
+    --danger: #de350b;
+    --danger-hover: #bf2600;
+    --shadow-sm: 0 1px 2px rgba(9,30,66,0.08);
+    --radius: 6px;
+    --transition: 120ms ease;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    color: var(--text-primary);
+    background: var(--bg);
+    display: flex;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    user-select: none;
+  }
+
+  .sidebar-header {
+    padding: 16px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  .btn-icon {
+    width: 32px; height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: background var(--transition), color var(--transition);
+    flex-shrink: 0;
+  }
+  .btn-icon:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+  .btn-icon svg { width: 18px; height: 18px; }
+
+  .sidebar-search {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search-wrapper svg {
+    position: absolute;
+    left: 8px;
+    width: 14px; height: 14px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .search-wrapper input {
+    width: 100%;
+    padding: 6px 8px 6px 28px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .search-wrapper input:focus { border-color: var(--accent); }
+  .search-wrapper input::placeholder { color: var(--text-muted); }
+
+  .note-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .note-list-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .note-list-empty svg {
+    width: 40px; height: 40px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+  }
+
+  .note-item {
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: background var(--transition);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .note-item:hover { background: var(--bg-sidebar-hover); }
+  .note-item.active { background: var(--bg-active); }
+
+  .note-item-title {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+    padding-right: 24px;
+  }
+  .note-item-title.empty { color: var(--text-muted); font-style: italic; }
+
+  .note-item-preview {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .note-item-time {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .note-item-delete {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 24px; height: 24px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .note-item-delete svg { width: 14px; height: 14px; }
+  .note-item:hover .note-item-delete { display: flex; }
+  .note-item-delete:hover { background: rgba(222,53,11,0.1); color: var(--danger); }
+
+  .editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-editor);
+  }
+
+  .editor-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-muted);
+  }
+  .editor-empty svg {
+    width: 64px; height: 64px;
+    opacity: 0.15;
+  }
+  .editor-empty h2 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .editor-empty p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .editor-header {
+    padding: 20px 32px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .editor-title {
+    flex: 1;
+    font-size: 22px;
+    font-weight: 600;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    background: transparent;
+    padding: 4px 0;
+    line-height: 1.3;
+    resize: none;
+  }
+  .editor-title::placeholder { color: var(--text-muted); }
+
+  .editor-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+  .editor-actions .btn-icon { width: 30px; height: 30px; }
+
+  .editor-body {
+    flex: 1;
+    padding: 8px 32px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .editor-textarea {
+    flex: 1;
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text-primary);
+    background: transparent;
+    font-family: inherit;
+    padding: 8px 0;
+  }
+  .editor-textarea::placeholder { color: var(--text-muted); }
+
+  .editor-footer {
+    padding: 8px 32px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .editor-footer-left { display: flex; gap: 16px; align-items: center; }
+  .editor-save-indicator { font-style: italic; }
+  .editor-save-indicator.saved { color: #36b37e; }
+  .editor-save-indicator.unsaved { color: var(--text-muted); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  @media (max-width: 640px) {
+    .sidebar { width: 200px; min-width: 200px; }
+    .editor-header { padding: 16px 20px 0; }
+    .editor-body { padding: 8px 20px 16px; }
+    .editor-footer { padding: 8px 20px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" role="navigation" aria-label="笔记列表">
+  <div class="sidebar-header">
+    <h1>笔记</h1>
+    <button class="btn-icon" id="btn-new-note" title="新建笔记 (Ctrl+N)" aria-label="新建笔记">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
+  <div class="sidebar-search">
+    <div class="search-wrapper">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-input" placeholder="搜索笔记..." aria-label="搜索笔记">
+    </div>
+  </div>
+
+  <div class="note-list" id="note-list" role="list" aria-label="笔记">
+    <div class="note-list-empty" id="note-list-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <p>点击 + 新建笔记</p>
+    </div>
+  </div>
+</aside>
+
+<main class="editor" role="main">
+  <div class="editor-empty" id="editor-empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    <h2>选择或创建一篇笔记</h2>
+    <p>从左侧列表选择已有笔记，或点击 + 新建</p>
+  </div>
+
+  <div class="editor-header" id="editor-header" style="display:none">
+    <input type="text" class="editor-title" id="editor-title" placeholder="无标题笔记" aria-label="笔记标题">
+    <div class="editor-actions">
+      <button class="btn-icon" id="btn-delete-note" title="删除笔记" aria-label="删除笔记">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="editor-body" id="editor-body" style="display:none">
+    <textarea class="editor-textarea" id="editor-textarea" placeholder="开始写点什么..." aria-label="笔记内容"></textarea>
+  </div>
+
+  <div class="editor-footer" id="editor-footer" style="display:none">
+    <div class="editor-footer-left">
+      <span id="char-count">0 字符</span>
+      <span class="editor-save-indicator" id="save-indicator"></span>
+    </div>
+    <span id="edited-time"></span>
+  </div>
+</main>
+
+<script>
+(function() {
+  'use strict';
+
+  const STORAGE_KEY = 'notes_app_data';
+
+  let notes = [];
+  let activeId = null;
+  let saveTimer = null;
+
+  const $ = (s) => document.querySelector(s);
+  const noteList = $('#note-list');
+  const noteListEmpty = $('#note-list-empty');
+  const editorEmpty = $('#editor-empty');
+  const editorHeader = $('#editor-header');
+  const editorBody = $('#editor-body');
+  const editorFooter = $('#editor-footer');
+  const titleInput = $('#editor-title');
+  const textarea = $('#editor-textarea');
+  const charCount = $('#char-count');
+  const saveIndicator = $('#save-indicator');
+  const editedTime = $('#edited-time');
+  const searchInput = $('#search-input');
+  const btnNewNote = $('#btn-new-note');
+  const btnDeleteNote = $('#btn-delete-note');
+
+  function uid() {
+    return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const pad = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '/' + pad(d.getMonth()+1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function getPreview(note) {
+    const t = (note.title || '').trim();
+    const c = (note.content || '').trim();
+    if (!t && !c) return '空白笔记';
+    if (t && !c) return t;
+    const firstLine = c.split('\n')[0].trim();
+    if (t) {
+      return firstLine && firstLine !== t ? firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '') : '';
+    }
+    return firstLine.slice(0, 50) + (firstLine.length > 50 ? '...' : '');
+  }
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch(e) {}
+    return [];
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    } catch(e) {
+      console.warn('Failed to save notes:', e);
+    }
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function renderList() {
+    var query = (searchInput.value || '').trim().toLowerCase();
+    var filtered = notes;
+    if (query) {
+      filtered = notes.filter(function(n) {
+        return (n.title || '').toLowerCase().indexOf(query) !== -1 ||
+               (n.content || '').toLowerCase().indexOf(query) !== -1;
+      });
+    }
+
+    var sorted = filtered.slice().sort(function(a, b) {
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
+
+    var items = noteList.querySelectorAll('.note-item');
+    for (var i = 0; i < items.length; i++) items[i].remove();
+
+    if (sorted.length === 0) {
+      noteListEmpty.style.display = 'block';
+      if (query) {
+        noteListEmpty.innerHTML = '<p>未找到匹配 "' + escapeHtml(searchInput.value) + '" 的笔记</p>';
+      } else {
+        noteListEmpty.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><p>点击 + 新建笔记</p>';
+      }
+      return;
+    }
+
+    noteListEmpty.style.display = 'none';
+
+    for (var i = 0; i < sorted.length; i++) {
+      var note = sorted[i];
+      var el = document.createElement('div');
+      el.className = 'note-item' + (note.id === activeId ? ' active' : '');
+      el.dataset.id = note.id;
+      el.setAttribute('role', 'listitem');
+
+      var title = (note.title || '').trim() || '无标题';
+      var preview = getPreview(note);
+      var time = formatTime(note.updatedAt);
+
+      var inner = '<div class="note-item-title' + ((note.title || '').trim() ? '' : ' empty') + '">' + escapeHtml(title) + '</div>';
+      if (preview) {
+        inner += '<div class="note-item-preview">' + escapeHtml(preview) + '</div>';
+      }
+      inner += '<div class="note-item-time">' + time + '</div>';
+      inner += '<button class="note-item-delete" title="删除笔记" aria-label="删除笔记">';
+      inner += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      inner += '</button>';
+
+      el.innerHTML = inner;
+
+      el.addEventListener('click', (function(id) {
+        return function(e) {
+          if (e.target.closest('.note-item-delete')) return;
+          selectNote(id);
+        };
+      })(note.id));
+
+      var deleteBtn = el.querySelector('.note-item-delete');
+      deleteBtn.addEventListener('click', (function(id) {
+        return function(e) {
+          e.stopPropagation();
+          deleteNote(id);
+        };
+      })(note.id));
+
+      noteList.appendChild(el);
+    }
+  }
+
+  function updateEditor() {
+    if (!activeId) {
+      editorEmpty.style.display = 'flex';
+      editorHeader.style.display = 'none';
+      editorBody.style.display = 'none';
+      editorFooter.style.display = 'none';
+      return;
+    }
+
+    var note = notes.find(function(n) { return n.id === activeId; });
+    if (!note) {
+      activeId = null;
+      updateEditor();
+      return;
+    }
+
+    editorEmpty.style.display = 'none';
+    editorHeader.style.display = 'flex';
+    editorBody.style.display = 'flex';
+    editorFooter.style.display = 'flex';
+
+    titleInput.value = note.title || '';
+    textarea.value = note.content || '';
+    updateFooter(note);
+  }
+
+  function updateFooter(note) {
+    if (!note) return;
+    var len = (note.content || '').length;
+    charCount.textContent = len + ' 字符';
+    editedTime.textContent = note.updatedAt ? '最后编辑: ' + formatTime(note.updatedAt) : '';
+  }
+
+  function selectNote(id) {
+    if (id === activeId) return;
+    saveCurrentNote();
+    activeId = id;
+    renderList();
+    updateEditor();
+    requestAnimationFrame(function() {
+      if (activeId) titleInput.focus();
+    });
+  }
+
+  function createNote() {
+    saveCurrentNote();
+    var now = Date.now();
+    var note = {
+      id: uid(),
+      title: '',
+      content: '',
+      createdAt: now,
+      updatedAt: now
+    };
+    notes.push(note);
+    saveData();
+    activeId = note.id;
+    renderList();
+    updateEditor();
+    requestAnimationFrame(function() { titleInput.focus(); });
+    showSaveStatus('saved');
+  }
+
+  function deleteNote(id) {
+    var note = notes.find(function(n) { return n.id === id; });
+    var title = (note && (note.title || '').trim()) || '无标题笔记';
+    if (!confirm('确定删除 "' + title + '"？此操作不可撤销。')) return;
+
+    notes = notes.filter(function(n) { return n.id !== id; });
+    if (activeId === id) {
+      activeId = notes.length > 0 ? notes[notes.length - 1].id : null;
+    }
+    saveData();
+    renderList();
+    updateEditor();
+  }
+
+  function saveCurrentNote() {
+    if (!activeId) return;
+    var note = notes.find(function(n) { return n.id === activeId; });
+    if (!note) return;
+
+    var newTitle = titleInput.value || '';
+    var newContent = textarea.value || '';
+
+    if (note.title === newTitle && note.content === newContent) return;
+
+    note.title = newTitle;
+    note.content = newContent;
+    note.updatedAt = Date.now();
+    saveData();
+    renderList();
+    updateFooter(note);
+    showSaveStatus('saved');
+  }
+
+  function debouncedSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function() {
+      saveCurrentNote();
+      saveTimer = null;
+    }, 400);
+    showSaveStatus('unsaved');
+  }
+
+  function showSaveStatus(status) {
+    if (status === 'saved') {
+      saveIndicator.textContent = '已保存';
+      saveIndicator.className = 'editor-save-indicator saved';
+    } else {
+      saveIndicator.textContent = '保存中...';
+      saveIndicator.className = 'editor-save-indicator unsaved';
+    }
+  }
+
+  btnNewNote.addEventListener('click', createNote);
+
+  btnDeleteNote.addEventListener('click', function() {
+    if (activeId) deleteNote(activeId);
+  });
+
+  titleInput.addEventListener('input', debouncedSave);
+  textarea.addEventListener('input', debouncedSave);
+
+  titleInput.addEventListener('blur', function() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    saveCurrentNote();
+  });
+  textarea.addEventListener('blur', function() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    saveCurrentNote();
+  });
+
+  searchInput.addEventListener('input', function() { renderList(); });
+
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'n' || e.key === 'N')) {
+      e.preventDefault();
+      createNote();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = '';
+      renderList();
+      searchInput.blur();
+    }
+  });
+
+  function init() {
+    notes = loadData();
+    if (notes.length > 0) {
+      var sorted = notes.slice().sort(function(a, b) {
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+      activeId = sorted[0].id;
+    }
+    renderList();
+    updateEditor();
+    showSaveStatus('saved');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
