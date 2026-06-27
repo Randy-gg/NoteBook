@@ -101,7 +101,50 @@
   .editor-save-indicator.saved { color: #36b37e; }
   .editor-save-indicator.unsaved { color: var(--text-muted); }
 
-  .modal-overlay { position: fixed; inset: 0; background: rgba(9,30,66,0.35); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .sidebar-footer { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .theme-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;
+    color: var(--text-secondary); padding: 4px 8px; border-radius: var(--radius);
+    transition: background var(--transition), color var(--transition); user-select: none; flex: 1;
+  }
+  .theme-toggle:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+  .theme-toggle svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .theme-toggle-label { line-height: 1; }
+
+  /* ===== Dark Mode ===== */
+  body.dark-mode { --bg: #1a1b1e; --bg-sidebar: #1e1f23; --bg-sidebar-hover: #2a2b30; --bg-active: #333438; --bg-editor: #1a1b1e; --text-primary: #e4e5e7; --text-secondary: #a0a2a8; --text-muted: #6b6d75; --border: #2e2f34; --accent: #3b82f6; --accent-hover: #60a5fa; }
+  body.dark-mode .search-wrapper input { background: #25262b; color: var(--text-primary); border-color: var(--border); }
+  body.dark-mode .search-wrapper input:focus { border-color: var(--accent); }
+
+  .sidebar-footer { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; }
+  .theme-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;
+    color: var(--text-secondary); padding: 4px 8px; border-radius: var(--radius);
+    transition: background var(--transition), color var(--transition); user-select: none;
+  }
+  .theme-toggle:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+  .theme-toggle svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .theme-toggle-label { line-height: 1; }
+
+  body.dark-mode {
+    --bg: #1a1b1e;
+    --bg-sidebar: #1e1f23;
+    --bg-sidebar-hover: #2a2b30;
+    --bg-active: #333438;
+    --bg-editor: #1a1b1e;
+    --text-primary: #e4e5e7;
+    --text-secondary: #a0a2a8;
+    --text-muted: #6b6d75;
+    --border: #2e2f34;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+  }
+  body.dark-mode .search-wrapper input { background: #25262b; color: var(--text-primary); border-color: var(--border); }
+  body.dark-mode .search-wrapper input:focus { border-color: var(--accent); }
+  body.dark-mode ::-webkit-scrollbar-thumb { background: var(--border); }
+  body.dark-mode ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; }
   .modal { background: var(--bg); border-radius: 8px; box-shadow: 0 8px 24px rgba(9,30,66,0.15); padding: 24px; width: 380px; max-width: 90vw; }
   .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .modal-header svg { width: 20px; height: 20px; color: var(--danger); }
@@ -149,7 +192,13 @@
       <p>点击 + 新建笔记</p>
     </div>
   </div>
-</aside>
+  <div class="sidebar-footer">
+    <div class="theme-toggle" id="theme-toggle" title="切换主题" data-testid="theme-toggle">
+      <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span class="theme-toggle-label" id="theme-label">深色模式</span>
+    </div>
+  </div>
+  </aside>
 
 <main class="editor" role="main">
   <div class="editor-empty" id="editor-empty">
@@ -210,6 +259,9 @@
   var textarea = q('#editor-textarea');
   var charCount = q('#char-count');
   var saveIndicator = q('#save-indicator');
+  var themeToggle = q('#theme-toggle');
+  var themeIcon = q('#theme-icon');
+  var themeLabel = q('#theme-label');
   var editedTime = q('#edited-time');
   var searchInput = q('#search-input');
   var btnNewNote = q('#btn-new-note');
@@ -248,6 +300,20 @@
     return [];
   }
   function saveData() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch(e) {} }
+
+  var THEME_KEY = "notes_app_theme";
+  var THEME_KEY = "notes_app_theme";
+  function toggleTheme() {
+    var isDark = document.body.classList.toggle("dark-mode");
+    if (isDark) {
+      themeIcon.innerHTML = "<path d=\"M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z\"/>";
+      themeLabel.textContent = "浅色模式";
+    } else {
+      themeIcon.innerHTML = "<circle cx=\"12\" cy=\"12\" r=\"5\"/><line x1=\"12\" y1=\"1\" x2=\"12\" y2=\"3\"/><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"23\"/><line x1=\"4.22\" y1=\"4.22\" x2=\"5.64\" y2=\"5.64\"/><line x1=\"18.36\" y1=\"18.36\" x2=\"19.78\" y2=\"19.78\"/><line x1=\"1\" y1=\"12\" x2=\"3\" y2=\"12\"/><line x1=\"21\" y1=\"12\" x2=\"23\" y2=\"12\"/><line x1=\"4.22\" y1=\"19.78\" x2=\"5.64\" y2=\"18.36\"/><line x1=\"18.36\" y1=\"5.64\" x2=\"19.78\" y2=\"4.22\"/>";
+      themeLabel.textContent = "深色模式";
+    }
+    try { localStorage.setItem(THEME_KEY, isDark ? "dark" : "light"); } catch(e) {}
+  }
 
   function updateNoteCount() {
     var t = notes.length;
@@ -384,6 +450,7 @@
     else { saveIndicator.textContent = '保存中...'; saveIndicator.className = 'editor-save-indicator unsaved'; }
   }
 
+  themeToggle.addEventListener('click', toggleTheme);
   btnNewNote.addEventListener('click', createNote);
   btnDeleteNote.addEventListener('click', function() { if (activeId) showDeleteModal(activeId); });
   titleInput.addEventListener('input', debouncedSave);
@@ -405,3 +472,6 @@
 </script>
 </body>
 </html>
+
+
+
